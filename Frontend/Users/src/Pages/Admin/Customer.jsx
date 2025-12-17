@@ -59,7 +59,7 @@ function Customer() {
         <div className='fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200'>
           <div className='bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in zoom-in duration-300'>
             {/* Header */}
-            <div className='bg-gradient-to-r from-indigo-600 to-blue-600 px-8 py-6'>
+            <div className='bg-linear-to-r from-indigo-600 to-blue-600 px-8 py-6'>
               <h3 className='text-2xl font-bold text-white'>
                 {editingUser ? 'Edit Customer' : 'Add New Customer'}
               </h3>
@@ -251,7 +251,7 @@ function Customer() {
                 </button>
                 <button
                   type='submit'
-                  className='px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold hover:from-indigo-700 hover:to-blue-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all'
+                  className='px-6 py-3 rounded-lg bg-linear-to-r from-indigo-600 to-blue-600 text-white font-semibold hover:from-indigo-700 hover:to-blue-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all'
                 >
                   {editingUser ? '✓ Update Customer' : '+ Save Customer'}
                 </button>

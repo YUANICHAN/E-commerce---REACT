@@ -31,6 +31,29 @@ class web {
         $router->put('cart/update', 'CartController@updateCartItem');
         $router->delete('cart/remove', 'CartController@removeCartItem');
 
+        // Admin Auth Routes
+        $router->post('admin/auth/login', 'AdminAuthController@login');
+        $router->post('admin/auth/logout', 'AdminAuthController@logout');
+
+        // Admin Dashboard Routes
+        $router->get('admin/dashboard/stats', 'DashboardController@getStats');
+        $router->get('admin/dashboard/recent-orders', 'DashboardController@getRecentOrders');
+        $router->get('admin/dashboard/order-breakdown', 'DashboardController@getOrderStatusBreakdown');
+        $router->get('admin/dashboard/top-products', 'DashboardController@getTopProducts');
+        $router->get('admin/dashboard', 'DashboardController@getDashboardData');
+
+        // Admin Analytics Routes
+        $router->get('admin/analytics', 'AnalyticsController@getAnalyticsData');
+        $router->get('admin/analytics/metrics', 'AnalyticsController@getMetrics');
+        $router->get('admin/analytics/revenue-chart', 'AnalyticsController@getRevenueChart');
+        $router->get('admin/analytics/orders-chart', 'AnalyticsController@getOrdersChart');
+        $router->get('admin/analytics/category-sales', 'AnalyticsController@getCategorySales');
+        $router->get('admin/analytics/traffic-sources', 'AnalyticsController@getTrafficSources');
+
+        // Admin Orders Routes (must be before /orders/{id} to avoid route conflict)
+        $router->get('admin/orders', 'OrderController@getAllOrders');
+        $router->put('admin/orders/{id}/status', 'OrderController@updateOrderStatus');
+
         // Orders Routes
         $router->get('orders', 'OrderController@getUserOrders');
         $router->get('orders/{id}', 'OrderController@getOrderDetails');
@@ -52,6 +75,12 @@ class web {
         $router->get('wishlist', 'WishlistController@getUserWishlist');
         $router->post('wishlist/add', 'WishlistController@addToWishlist');
         $router->delete('wishlist/{id}', 'WishlistController@removeFromWishlist');
+
+        // Payment Routes (Mockup API)
+        $router->post('payment/process', 'PaymentController@processPayment');
+        $router->post('payment/validate', 'PaymentController@validatePaymentMethod');
+        $router->get('payment/status/{transactionId}', 'PaymentController@getPaymentStatus');
+        $router->post('payment/refund', 'PaymentController@refundPayment');
     }
 }
 ?>

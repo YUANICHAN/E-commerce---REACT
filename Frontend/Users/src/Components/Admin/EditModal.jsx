@@ -4,19 +4,27 @@ import 'leaflet/dist/leaflet.css';
 
 function EditModal({ order, isOpen, onClose, onSave }) {
   const [status, setStatus] = useState(order?.status || '');
-  const [coords, setCoords] = useState(order?.location || { lat: 37.7749, lng: -122.4194 });
+  const [coords, setCoords] = useState({
+    lat: order?.location_lat ? parseFloat(order.location_lat) : 37.7749,
+    lng: order?.location_lng ? parseFloat(order.location_lng) : -122.4194
+  });
 
   useEffect(() => {
-    setStatus(order?.status || '');
-    setCoords(order?.location || { lat: 37.7749, lng: -122.4194 });
+    if (order) {
+      setStatus(order.status || '');
+      setCoords({
+        lat: order.location_lat ? parseFloat(order.location_lat) : 37.7749,
+        lng: order.location_lng ? parseFloat(order.location_lng) : -122.4194
+      });
+    }
   }, [order]);
 
   if (!isOpen || !order) return null;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 px-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl animate-in fade-in duration-200 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl animate-in fade-in duration-200 overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50 sticky top-0">
           <h3 className="text-lg font-semibold text-gray-900">Edit Order</h3>
           <button
             onClick={onClose}
@@ -29,24 +37,24 @@ function EditModal({ order, isOpen, onClose, onSave }) {
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-xs uppercase text-gray-500">Order ID</p>
-              <p className="text-sm font-semibold text-gray-900">{order.id}</p>
+              <p className="text-xs uppercase text-gray-500">Order Number</p>
+              <p className="text-sm font-semibold text-gray-900">{order.order_number}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-gray-500">Customer</p>
-              <p className="text-sm font-semibold text-gray-900">{order.customer}</p>
+              <p className="text-sm font-semibold text-gray-900">{order.customer_name || 'N/A'}</p>
             </div>
             <div>
-              <p className="text-xs uppercase text-gray-500">Product</p>
-              <p className="text-sm font-semibold text-gray-900">{order.product}</p>
+              <p className="text-xs uppercase text-gray-500">Payment Method</p>
+              <p className="text-sm font-semibold text-gray-900 capitalize">{order.payment_method || 'N/A'}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-gray-500">Amount</p>
-              <p className="text-sm font-semibold text-gray-900">${order.amount.toFixed(2)}</p>
+              <p className="text-sm font-semibold text-gray-900">${order.total_amount ? parseFloat(order.total_amount).toFixed(2) : '0.00'}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-gray-500">Date</p>
-              <p className="text-sm font-semibold text-gray-900">{order.date}</p>
+              <p className="text-sm font-semibold text-gray-900">{new Date(order.created_at).toLocaleDateString()}</p>
             </div>
             <div>
               <p className="text-xs uppercase text-gray-500">Status</p>
@@ -66,7 +74,7 @@ function EditModal({ order, isOpen, onClose, onSave }) {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-gray-900">Product Location</p>
+              <p className="text-sm font-semibold text-gray-900">Order Location</p>
               <span className="text-xs text-gray-500">Powered by OpenStreetMap</span>
             </div>
 
@@ -115,7 +123,7 @@ function EditModal({ order, isOpen, onClose, onSave }) {
                   }}
                 >
                   <Popup>
-                    {order.product} <br /> {order.customer}
+                    Order: {order.order_number} <br /> Customer: {order.customer_name}
                   </Popup>
                 </Marker>
               </MapContainer>
@@ -123,7 +131,7 @@ function EditModal({ order, isOpen, onClose, onSave }) {
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 sticky bottom-0">
           <button
             onClick={onClose}
             className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"
@@ -131,7 +139,7 @@ function EditModal({ order, isOpen, onClose, onSave }) {
             Cancel
           </button>
           <button
-            onClick={() => onSave({ ...order, status, location: coords })}
+            onClick={() => onSave({ ...order, status, location_lat: coords.lat, location_lng: coords.lng })}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
           >
             Save Changes

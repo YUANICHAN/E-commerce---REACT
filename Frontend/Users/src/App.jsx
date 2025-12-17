@@ -17,7 +17,9 @@ import Settings from './Pages/Admin/Settings.jsx';
 import NotificationContainer from './Components/Notification.jsx';
 import Checkout from './Pages/Users/Checkout.jsx';
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from './Components/ProtectedRoute.jsx';
+import AdminLogin from './Pages/Admin/AdminLogin.jsx';
 
 function App() {
 
@@ -25,7 +27,8 @@ function App() {
     <>
       <Router>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/home" element={<Home />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/deals" element={<TodaysDeals />} />
@@ -33,12 +36,13 @@ function App() {
           <Route path="/account" element={<Account />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/admin/dashboard" element={<Dashboard />} />
-          <Route path="/admin/products" element={<Product />} />
-          <Route path="/admin/orders" element={<Orders />} />
-          <Route path="/admin/customers" element={<Customer />} />
-          <Route path="/admin/analytics" element={<Analytics />} />
-          <Route path="/admin/settings" element={<Settings />} />
+          <Route path="/admin/login" element={<ProtectedRoute requiredAuth={false} requireAdmin={true} element={<AdminLogin />} />} />
+          <Route path="/admin/dashboard" element={<ProtectedRoute requiredAuth={true} requireAdmin={true} element={<Dashboard />} />} />
+          <Route path="/admin/products" element={<ProtectedRoute requiredAuth={true} requireAdmin={true} element={<Product />} />} />
+          <Route path="/admin/orders" element={<ProtectedRoute requiredAuth={true} requireAdmin={true} element={<Orders />} />} />
+          <Route path="/admin/customers" element={<ProtectedRoute requiredAuth={true} requireAdmin={true} element={<Customer />} />} />
+          <Route path="/admin/analytics" element={<ProtectedRoute requiredAuth={true} requireAdmin={true} element={<Analytics />} />} />
+          <Route path="/admin/settings" element={<ProtectedRoute requiredAuth={true} requireAdmin={true} element={<Settings />} />} />
           <Route path="/checkout" element={<Checkout />} />
         </Routes>
       </Router>

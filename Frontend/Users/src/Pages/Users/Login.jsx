@@ -1,15 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { Mail, Lock, Eye, EyeOff, ShoppingBag, ArrowRight } from 'lucide-react';
 import { authAPI } from '../../Services/api.js';
 
 export default function Login() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false
   });
+
+  // Redirect if already logged in (respect admin vs user)
+  useEffect(() => {
+    const authToken = localStorage.getItem('authToken');
+    const role = localStorage.getItem('authRole');
+    const hasSession = document.cookie.includes('PHPSESSID');
+
+    if (role === 'admin' && (authToken || hasSession)) {
+      navigate('/admin/dashboard', { replace: true });
+      return;
+    }
+
+    if (authToken || hasSession) {
+      navigate('/home', { replace: true });
+    }
+  }, [navigate]);
 
   const handleSubmit = async () => {
     if (!formData.email || !formData.password) {
@@ -34,7 +52,13 @@ export default function Login() {
         text: res?.message || 'You are now logged in.',
         confirmButtonColor: '#4F46E5',
       }).then(() => {
-        window.location.href = '/';
+        // Store auth token if available
+        if (res?.token) {
+          localStorage.setItem('authToken', res.token);
+        }
+        // Mark role as user to avoid admin redirects on this screen
+        localStorage.setItem('authRole', 'user');
+        window.location.href = '/home';
       });
     } catch (err) {
       Swal.fire({

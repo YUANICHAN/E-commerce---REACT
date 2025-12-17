@@ -118,6 +118,29 @@ export default function Cart() {
     window.location.href = '/shop';
   }
 
+  const handleProceedToCheckout = () => {
+    if (cartItems.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Cart is Empty',
+        text: 'Please add items to your cart before proceeding to checkout.',
+        confirmButtonColor: '#4F46E5',
+      });
+      return;
+    }
+    // Store cart summary in sessionStorage for checkout page
+    sessionStorage.setItem('checkoutData', JSON.stringify({
+      cartItems,
+      subtotal,
+      discount,
+      shipping,
+      tax,
+      total,
+      appliedPromo
+    }));
+    window.location.href = '/checkout';
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -283,7 +306,10 @@ export default function Cart() {
                 </div>
 
                 {/* Checkout Button */}
-                <button className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-lg mb-3">
+                <button 
+                  onClick={handleProceedToCheckout}
+                  className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-lg mb-3"
+                >
                   Proceed to Checkout
                 </button>
 

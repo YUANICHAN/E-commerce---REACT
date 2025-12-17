@@ -13,10 +13,14 @@ import {
 import Chart from 'chart.js/auto';
 import Sidebar from '../../Components/Admin/Sidebar.jsx';
 import Header from '../../Components/Admin/Header.jsx';
+import api from '../../Services/api';
 
 function Analytics() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [timeRange, setTimeRange] = useState('7days');
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState(null);
+  const [chartData, setChartData] = useState(null);
   const lineChartRef = useRef(null);
   const barChartRef = useRef(null);
   const doughnutChartRef = useRef(null);
@@ -26,44 +30,34 @@ function Analytics() {
   const doughnutChartInstance = useRef(null);
   const areaChartInstance = useRef(null);
 
-  // Mock analytics data
-  const [metrics] = useState({
-    revenue: { value: '$125,430', change: 12.5, trend: 'up' },
-    orders: { value: '1,247', change: 8.2, trend: 'up' },
-    customers: { value: '892', change: -2.1, trend: 'down' },
-    avgOrder: { value: '$100.58', change: 5.3, trend: 'up' },
-    conversionRate: { value: '3.24%', change: 0.8, trend: 'up' },
-    pageViews: { value: '45,892', change: 15.7, trend: 'up' }
-  });
+  // Fetch analytics data
+  useEffect(() => {
+    const fetchAnalyticsData = async () => {
+      try {
+        setLoading(true);
+        const response = await api(`/admin/analytics?timeRange=${timeRange}`, { method: 'GET' });
+        
+        if (response?.success) {
+          setMetrics(response.data.metrics);
+          setChartData(response.data);
+        } else {
+          console.error('Analytics API error:', response);
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Chart data based on time range
-  const getChartData = () => {
-    if (timeRange === '7days') {
-      return {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        revenue: [12000, 19000, 15000, 25000, 22000, 30000, 28000],
-        orders: [45, 67, 52, 89, 78, 95, 88]
-      };
-    } else if (timeRange === '30days') {
-      return {
-        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-        revenue: [85000, 92000, 88000, 95000],
-        orders: [320, 345, 330, 355]
-      };
-    } else {
-      return {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        revenue: [280000, 310000, 295000, 340000, 355000, 380000],
-        orders: [1050, 1150, 1100, 1280, 1320, 1400]
-      };
-    }
-  };
+    fetchAnalyticsData();
+  }, [timeRange]);
 
   useEffect(() => {
-    const chartData = getChartData();
+    if (!chartData) return;
 
     // Line Chart - Revenue Over Time
-    if (lineChartRef.current) {
+    if (lineChartRef.current && chartData.revenueOverTime) {
       if (lineChartInstance.current) {
         lineChartInstance.current.destroy();
       }
@@ -72,10 +66,10 @@ function Analytics() {
       lineChartInstance.current = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: chartData.labels,
+          labels: chartData.revenueOverTime.labels,
           datasets: [{
             label: 'Revenue',
-            data: chartData.revenue,
+            data: chartData.revenueOverTime.data,
             borderColor: 'rgb(79, 70, 229)',
             backgroundColor: 'rgba(79, 70, 229, 0.1)',
             tension: 0.4,
@@ -131,7 +125,7 @@ function Analytics() {
     }
 
     // Bar Chart - Orders Over Time
-    if (barChartRef.current) {
+    if (barChartRef.current && chartData.ordersOverTime) {
       if (barChartInstance.current) {
         barChartInstance.current.destroy();
       }
@@ -140,10 +134,10 @@ function Analytics() {
       barChartInstance.current = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: chartData.labels,
+          labels: chartData.ordersOverTime.labels,
           datasets: [{
             label: 'Orders',
-            data: chartData.orders,
+            data: chartData.ordersOverTime.data,
             backgroundColor: 'rgba(16, 185, 129, 0.8)',
             borderColor: 'rgb(16, 185, 129)',
             borderWidth: 2,
@@ -188,7 +182,7 @@ function Analytics() {
     }
 
     // Doughnut Chart - Category Sales
-    if (doughnutChartRef.current) {
+    if (doughnutChartRef.current && chartData.salesByCategory) {
       if (doughnutChartInstance.current) {
         doughnutChartInstance.current.destroy();
       }
@@ -197,9 +191,9 @@ function Analytics() {
       doughnutChartInstance.current = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: ['Electronics', 'Clothing', 'Home & Garden', 'Sports', 'Books'],
+          labels: chartData.salesByCategory.labels,
           datasets: [{
-            data: [35, 25, 20, 12, 8],
+            data: chartData.salesByCategory.data,
             backgroundColor: [
               'rgba(79, 70, 229, 0.8)',
               'rgba(16, 185, 129, 0.8)',
@@ -246,48 +240,34 @@ function Analytics() {
     }
 
     // Area Chart - Traffic Sources
-    if (areaChartRef.current) {
+    if (areaChartRef.current && chartData.trafficSources) {
       if (areaChartInstance.current) {
         areaChartInstance.current.destroy();
       }
       
       const ctx = areaChartRef.current.getContext('2d');
+      const datasets = chartData.trafficSources.datasets.map((dataset, index) => {
+        const colors = [
+          { border: 'rgb(79, 70, 229)', bg: 'rgba(79, 70, 229, 0.3)' },
+          { border: 'rgb(16, 185, 129)', bg: 'rgba(16, 185, 129, 0.3)' },
+          { border: 'rgb(251, 146, 60)', bg: 'rgba(251, 146, 60, 0.3)' }
+        ];
+        
+        return {
+          label: dataset.label,
+          data: dataset.data,
+          borderColor: colors[index].border,
+          backgroundColor: colors[index].bg,
+          fill: true,
+          tension: 0.4
+        };
+      });
+
       areaChartInstance.current = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: chartData.labels,
-          datasets: [
-            {
-              label: 'Organic',
-              data: timeRange === '7days' ? [450, 520, 480, 580, 620, 680, 720] : 
-                    timeRange === '30days' ? [2100, 2300, 2200, 2500] : 
-                    [8200, 8800, 8500, 9200, 9500, 10100],
-              borderColor: 'rgb(79, 70, 229)',
-              backgroundColor: 'rgba(79, 70, 229, 0.3)',
-              fill: true,
-              tension: 0.4
-            },
-            {
-              label: 'Direct',
-              data: timeRange === '7days' ? [320, 380, 350, 420, 450, 490, 520] : 
-                    timeRange === '30days' ? [1500, 1650, 1600, 1800] : 
-                    [6100, 6500, 6300, 6900, 7200, 7600],
-              borderColor: 'rgb(16, 185, 129)',
-              backgroundColor: 'rgba(16, 185, 129, 0.3)',
-              fill: true,
-              tension: 0.4
-            },
-            {
-              label: 'Social',
-              data: timeRange === '7days' ? [180, 220, 200, 260, 280, 310, 340] : 
-                    timeRange === '30days' ? [850, 920, 900, 1000] : 
-                    [3400, 3700, 3600, 4100, 4300, 4600],
-              borderColor: 'rgb(251, 146, 60)',
-              backgroundColor: 'rgba(251, 146, 60, 0.3)',
-              fill: true,
-              tension: 0.4
-            }
-          ]
+          labels: chartData.trafficSources.labels,
+          datasets: datasets
         },
         options: {
           responsive: true,
@@ -337,7 +317,7 @@ function Analytics() {
       if (doughnutChartInstance.current) doughnutChartInstance.current.destroy();
       if (areaChartInstance.current) areaChartInstance.current.destroy();
     };
-  }, [timeRange]);
+  }, [chartData]);
 
   const MetricCard = ({ title, value, change, trend, icon: Icon, color }) => (
     <div className="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-all duration-300 transform hover:scale-105">
@@ -414,92 +394,102 @@ function Analytics() {
             </div>
           </div>
 
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-in fade-in duration-500">
-            <MetricCard 
-              title="Total Revenue" 
-              value={metrics.revenue.value}
-              change={metrics.revenue.change}
-              trend={metrics.revenue.trend}
-              icon={DollarSign} 
-              color="bg-green-500" 
-            />
-            <MetricCard 
-              title="Total Orders" 
-              value={metrics.orders.value}
-              change={metrics.orders.change}
-              trend={metrics.orders.trend}
-              icon={ShoppingCart} 
-              color="bg-blue-500" 
-            />
-            <MetricCard 
-              title="New Customers" 
-              value={metrics.customers.value}
-              change={metrics.customers.change}
-              trend={metrics.customers.trend}
-              icon={Users} 
-              color="bg-purple-500" 
-            />
-            <MetricCard 
-              title="Avg Order Value" 
-              value={metrics.avgOrder.value}
-              change={metrics.avgOrder.change}
-              trend={metrics.avgOrder.trend}
-              icon={DollarSign} 
-              color="bg-orange-500" 
-            />
-            <MetricCard 
-              title="Conversion Rate" 
-              value={metrics.conversionRate.value}
-              change={metrics.conversionRate.change}
-              trend={metrics.conversionRate.trend}
-              icon={TrendingUp} 
-              color="bg-indigo-500" 
-            />
-            <MetricCard 
-              title="Page Views" 
-              value={metrics.pageViews.value}
-              change={metrics.pageViews.change}
-              trend={metrics.pageViews.trend}
-              icon={Eye} 
-              color="bg-pink-500" 
-            />
-          </div>
-
-          {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {/* Line Chart - Revenue */}
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-300">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Over Time</h3>
-              <div className="h-64 sm:h-80">
-                <canvas ref={lineChartRef}></canvas>
-              </div>
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
             </div>
-
-            {/* Bar Chart - Orders */}
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-300">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Orders Over Time</h3>
-              <div className="h-64 sm:h-80">
-                <canvas ref={barChartRef}></canvas>
+          ) : metrics ? (
+            <>
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-in fade-in duration-500">
+                <MetricCard 
+                  title="Total Revenue" 
+                  value={metrics.revenue.value}
+                  change={metrics.revenue.change}
+                  trend={metrics.revenue.trend}
+                  icon={DollarSign} 
+                  color="bg-green-500" 
+                />
+                <MetricCard 
+                  title="Total Orders" 
+                  value={metrics.orders.value}
+                  change={metrics.orders.change}
+                  trend={metrics.orders.trend}
+                  icon={ShoppingCart} 
+                  color="bg-blue-500" 
+                />
+                <MetricCard 
+                  title="New Customers" 
+                  value={metrics.customers.value}
+                  change={metrics.customers.change}
+                  trend={metrics.customers.trend}
+                  icon={Users} 
+                  color="bg-purple-500" 
+                />
+                <MetricCard 
+                  title="Avg Order Value" 
+                  value={metrics.avgOrder.value}
+                  change={metrics.avgOrder.change}
+                  trend={metrics.avgOrder.trend}
+                  icon={DollarSign} 
+                  color="bg-orange-500" 
+                />
+                <MetricCard 
+                  title="Conversion Rate" 
+                  value={metrics.conversionRate.value}
+                  change={metrics.conversionRate.change}
+                  trend={metrics.conversionRate.trend}
+                  icon={TrendingUp} 
+                  color="bg-indigo-500" 
+                />
+                <MetricCard 
+                  title="Page Views" 
+                  value={metrics.pageViews.value}
+                  change={metrics.pageViews.change}
+                  trend={metrics.pageViews.trend}
+                  icon={Eye} 
+                  color="bg-pink-500" 
+                />
               </div>
-            </div>
 
-            {/* Doughnut Chart - Category Sales */}
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-300">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Sales by Category</h3>
-              <div className="h-64 sm:h-80 flex items-center justify-center">
-                <canvas ref={doughnutChartRef}></canvas>
-              </div>
-            </div>
+              {/* Charts Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                {/* Line Chart - Revenue */}
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-300">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Over Time</h3>
+                  <div className="h-64 sm:h-80">
+                    <canvas ref={lineChartRef}></canvas>
+                  </div>
+                </div>
 
-            {/* Area Chart - Traffic Sources */}
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-300">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Traffic Sources</h3>
-              <div className="h-64 sm:h-80">
-                <canvas ref={areaChartRef}></canvas>
+                {/* Bar Chart - Orders */}
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-300">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Orders Over Time</h3>
+                  <div className="h-64 sm:h-80">
+                    <canvas ref={barChartRef}></canvas>
+                  </div>
+                </div>
+
+                {/* Doughnut Chart - Category Sales */}
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-300">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Sales by Category</h3>
+                  <div className="h-64 sm:h-80 flex items-center justify-center">
+                    <canvas ref={doughnutChartRef}></canvas>
+                  </div>
+                </div>
+
+                {/* Area Chart - Traffic Sources */}
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-300">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Traffic Sources</h3>
+                  <div className="h-64 sm:h-80">
+                    <canvas ref={areaChartRef}></canvas>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          ) : (
+            <div className="text-center text-gray-500">No data available</div>
+          )}
         </div>
       </div>
     </div>

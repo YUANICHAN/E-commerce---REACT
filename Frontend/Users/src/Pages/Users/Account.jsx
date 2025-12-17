@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import Footer from '../../Components/Users/Footer.jsx';
 import { userAPI, orderAPI, addressAPI, paymentMethodAPI, wishlistAPI, authAPI } from '../../Services/api.js';
-import { User, ShoppingBag, Heart, MapPin, CreditCard, Bell, Shield, LogOut, Edit2, Save, X, Package, Clock, Star, Settings, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { User, ShoppingBag, Heart, MapPin, CreditCard, Bell, Shield, LogOut, Edit2, Save, X, Package, Clock, Star, Settings, ChevronRight, Plus, Trash2, Eye } from 'lucide-react';
 
 export default function Account() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -13,6 +13,8 @@ export default function Account() {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [wishlistItems, setWishlistItems] = useState([]);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -81,6 +83,7 @@ export default function Account() {
       ]);
 
       console.log('User response:', userRes);
+      console.log('Orders response:', ordersRes);
       
       if (userRes?.success && userRes?.data) {
         console.log('Setting profile data:', userRes.data);
@@ -90,7 +93,12 @@ export default function Account() {
         console.log('User data not available');
       }
       
-      if (ordersRes?.success) setOrders(ordersRes.data || []);
+      if (ordersRes?.success) {
+        console.log('Setting orders:', ordersRes.data);
+        setOrders(ordersRes.data || []);
+      } else {
+        console.log('Orders fetch failed:', ordersRes?.message);
+      }
       if (addressesRes?.success) setAddresses(addressesRes.data || []);
       if (paymentsRes?.success) setPaymentMethods(paymentsRes.data || []);
       if (wishlistRes?.success) {
@@ -416,9 +424,13 @@ export default function Account() {
           text: 'You have been signed out successfully.',
           confirmButtonColor: '#4F46E5',
         });
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('authRole');
         window.location.href = '/login';
       } catch (err) {
         console.error('Logout error:', err);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('authRole');
         window.location.href = '/login';
       }
     }
@@ -733,7 +745,13 @@ export default function Account() {
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
                               {order.status}
                             </span>
-                            <button className="text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
+                            <button 
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setShowOrderDetails(true);
+                              }}
+                              className="text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+                            >
                               View Details
                               <ChevronRight size={18} />
                             </button>
@@ -1170,6 +1188,131 @@ export default function Account() {
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
               >
                 {editingPayment ? 'Update' : 'Add'} Card
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Details Modal */}
+      {showOrderDetails && selectedOrder && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 px-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl animate-in fade-in duration-200 overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50 sticky top-0">
+              <h3 className="text-lg font-semibold text-gray-900">Order Details</h3>
+              <button
+                onClick={() => setShowOrderDetails(false)}
+                className="text-gray-500 hover:text-gray-800 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-sm text-gray-900">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Order Number</p>
+                  <p className="font-semibold">{selectedOrder.order_number}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Order Date</p>
+                  <p className="font-semibold">{new Date(selectedOrder.created_at).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Status</p>
+                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedOrder.status)}`}>
+                    {selectedOrder.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Payment Status</p>
+                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedOrder.payment_status)}`}>
+                    {selectedOrder.payment_status || 'N/A'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Payment Method</p>
+                  <p className="font-semibold capitalize">{selectedOrder.payment_method || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Total Amount</p>
+                  <p className="font-semibold text-lg text-indigo-600">${selectedOrder.total_amount ? parseFloat(selectedOrder.total_amount).toFixed(2) : '0.00'}</p>
+                </div>
+              </div>
+
+              {/* Order Breakdown */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>${selectedOrder.subtotal ? parseFloat(selectedOrder.subtotal).toFixed(2) : '0.00'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shipping Cost</span>
+                  <span>${selectedOrder.shipping_cost ? parseFloat(selectedOrder.shipping_cost).toFixed(2) : '0.00'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax</span>
+                  <span>${selectedOrder.tax_amount ? parseFloat(selectedOrder.tax_amount).toFixed(2) : '0.00'}</span>
+                </div>
+                {selectedOrder.discount_amount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount</span>
+                    <span>-${parseFloat(selectedOrder.discount_amount).toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Addresses */}
+              <div className="border-t pt-4">
+                <p className="text-xs uppercase text-gray-500 font-semibold mb-3">Shipping Address</p>
+                <p className="font-semibold text-gray-700">
+                  {selectedOrder.shipping_address ? (() => {
+                    try {
+                      const addr = JSON.parse(selectedOrder.shipping_address);
+                      return `${addr.firstName} ${addr.lastName}, ${addr.address}, ${addr.city}, ${addr.zipCode}, ${addr.country}`;
+                    } catch {
+                      return selectedOrder.shipping_address;
+                    }
+                  })() : 'N/A'}
+                </p>
+              </div>
+
+              {/* Location */}
+              {(selectedOrder.location_lat || selectedOrder.location_lng) && (
+                <div className="border-t pt-4">
+                  <p className="text-xs uppercase text-gray-500 font-semibold mb-2">Order Location</p>
+                  <p className="text-sm text-gray-600">
+                    Latitude: {parseFloat(selectedOrder.location_lat).toFixed(4)} <br />
+                    Longitude: {parseFloat(selectedOrder.location_lng).toFixed(4)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    <a 
+                      href={`https://maps.google.com/?q=${selectedOrder.location_lat},${selectedOrder.location_lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-700 underline"
+                    >
+                      View on Google Maps
+                    </a>
+                  </p>
+                </div>
+              )}
+
+              {/* Transaction ID */}
+              {selectedOrder.transaction_id && (
+                <div className="border-t pt-4">
+                  <p className="text-xs uppercase text-gray-500 font-semibold">Transaction ID</p>
+                  <p className="font-mono text-sm text-gray-700">{selectedOrder.transaction_id}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end sticky bottom-0">
+              <button
+                onClick={() => setShowOrderDetails(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

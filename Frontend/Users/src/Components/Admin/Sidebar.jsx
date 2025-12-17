@@ -1,5 +1,6 @@
 import React from 'react';
 import Swal from 'sweetalert2';
+import { adminAuthAPI } from '../../Services/api';
 import { 
   LayoutDashboard, 
   Package, 
@@ -43,10 +44,16 @@ function Sidebar({ activeItem = 'dashboard' }) {
       confirmButtonText: 'Yes, logout',
       cancelButtonText: 'Cancel',
       reverseButtons: true,
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        // Perform logout action here (e.g., clear session, redirect)
-        window.location.href = '/login';
+        try {
+          await adminAuthAPI.logout();
+        } catch (err) {
+          console.error('Admin logout error:', err);
+        }
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('authRole');
+        window.location.href = '/admin/login';
       }
     });
   };

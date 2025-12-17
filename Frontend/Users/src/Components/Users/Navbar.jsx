@@ -7,7 +7,7 @@ export default function UserNavbar() {
   const [cartCount, setCartCount] = useState(3); 
 
   const mainLinks = [
-    { id: 'home', label: 'Home', icon: Home, href: '/' },
+    { id: 'home', label: 'Home', icon: Home, href: '/home' },
     { id: 'shop', label: 'Shop', icon: Compass, href: '/shop' },
     { id: 'deals', label: 'Today\'s Deals', icon: Tag, href: '/deals' },
   ];
