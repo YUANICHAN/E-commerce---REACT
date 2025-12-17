@@ -2,6 +2,7 @@
 namespace App\Controller;
 
 use App\Model\User;
+use App\Core\Session;
 use PDOException;
 
 class UserController {
@@ -32,6 +33,38 @@ class UserController {
     public function getProfile($id) {
         try {
             $user = $this->userModel->getUserById((int)$id);
+            if (!$user) {
+                http_response_code(404);
+                return json_encode([
+                    'success' => false,
+                    'message' => 'User not found'
+                ]);
+            }
+            return json_encode([
+                'success' => true,
+                'data' => $user
+            ]);
+        } catch (PDOException $e) {
+            http_response_code(500);
+            return json_encode([
+                'success' => false,
+                'message' => 'Error fetching user: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    // Get current user from session
+    public function getCurrentUser() {
+        try {
+            $userId = Session::get('user_id');
+            if (!$userId) {
+                http_response_code(401);
+                return json_encode([
+                    'success' => false,
+                    'message' => 'Not authenticated'
+                ]);
+            }
+            $user = $this->userModel->getUserById((int)$userId);
             if (!$user) {
                 http_response_code(404);
                 return json_encode([

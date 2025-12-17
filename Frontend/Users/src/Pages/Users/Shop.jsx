@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Heart, Star, ShoppingCart, Filter, X, ChevronDown } from 'lucide-react';
 import Navbar from '../../Components/Users/Navbar.jsx';
 import Footer from '../../Components/Users/Footer.jsx';
-import { productAPI, categoryAPI } from '../../Services/api';
+import { productAPI, categoryAPI, cartAPI } from '../../Services/api';
+import Swal from 'sweetalert2';
 
 export default function Shop() {
   const [cartCount, setCartCount] = useState(0);
@@ -49,8 +50,40 @@ export default function Shop() {
     }
   };
 
-  const addToCart = () => {
-    setCartCount(cartCount + 1);
+  const addToCart = async (productId) => {
+    try {
+      const response = await cartAPI.addToCart({
+        user_id: 1,
+        product_id: productId,
+        quantity: 1,
+      });
+      setCartCount(prev => prev + 1);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Added to Cart!',
+        text: 'The product has been added to your cart.',
+        confirmButtonColor: '#4F46E5',
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to add to cart',
+        text: err.message || 'Something went wrong. Please try again.',
+        confirmButtonColor: '#DC2626',
+      }); 
+    } finally {
+      setLoading(false);
+      cartAPI.getCart(1).then(response => {
+        if (response.data) {
+          setCartCount(response.data.length);
+        }
+      }).catch(() => {
+        setCartCount(0);
+      });
+    }
   };
 
   const handleSearch = (searchTerm) => {
@@ -254,7 +287,7 @@ export default function Shop() {
                         ${product.price}
                       </span>
                       <button
-                        onClick={addToCart}
+                        onClick={() => addToCart(product.id)}
                         disabled={!product.inStock}
                         className={`px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2 ${
                           product.inStock

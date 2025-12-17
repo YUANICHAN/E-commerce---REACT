@@ -1,30 +1,101 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Tag, Truck } from 'lucide-react';
 import Footer from '../../Components/Users/Footer.jsx';
+import Swal from 'sweetalert2';
+import { cartAPI } from '../../Services/api.js';
 
 export default function Cart() {
-  const [cartItems, setCartItems] = useState([
-    { id: 1, name: 'Premium Wireless Headphones', price: 299.99, quantity: 1, image: '🎧', category: 'Electronics' },
-    { id: 2, name: 'Smart Fitness Watch', price: 199.99, quantity: 2, image: '⌚', category: 'Electronics' },
-    { id: 3, name: 'Designer Leather Jacket', price: 349.99, quantity: 1, image: '🧥', category: 'Fashion' },
-    { id: 4, name: 'Coffee Maker Deluxe', price: 159.99, quantity: 1, image: '☕', category: 'Home & Living' },
-  ]);
-
+  const [cartItems, setCartItems] = useState([]);
   const [promoCode, setPromoCode] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [appliedPromo, setAppliedPromo] = useState(null);
 
-  const updateQuantity = (id, change) => {
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + change) }
-          : item
-      )
-    );
+  useEffect(() => {
+    FetchCartItems();
+  }, []);
+
+  const FetchCartItems = async () => {
+    try {
+      setLoading(true);
+      const response = await cartAPI.getCart(1);
+      console.log(response);
+      if(response.success && response.data) {
+        setCartItems(response.data);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to fetch cart items');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const updateQuantity = async (id, change) => {
+    const item = cartItems.find(i => i.id === id);
+    if (!item) return;
+    if (item.quantity === 1 && change === -1) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Minimum quantity reached',
+        text: 'Quantity cannot be less than 1. Remove the item instead.',
+        confirmButtonColor: '#4F46E5',
+      });
+      return;
+    }
+    const newQty = Math.max(1, item.quantity + change);
+
+    try {
+      await cartAPI.updateCartItem({
+        cart_id: id,
+        user_id: 1,
+        quantity: newQty,
+      });
+      setCartItems(items =>
+        items.map(i => (i.id === id ? { ...i, quantity: newQty } : i))
+      );
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Update failed',
+        text: err.message || 'Unable to update quantity.',
+        confirmButtonColor: '#DC2626',
+      });
+    }
   };
 
-  const removeItem = (id) => {
-    setCartItems(items => items.filter(item => item.id !== id));
+  const removeItem = async (id) => {
+    const result = await Swal.fire({
+      title: 'Remove this item?',
+      text: 'This product will be removed from your cart.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#DC2626',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Remove',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      focusCancel: true,
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await cartAPI.removeCartItem({ cart_id: id, user_id: 1 });
+      setCartItems(items => items.filter(item => item.id !== id));
+      Swal.fire({
+        icon: 'success',
+        title: 'Removed',
+        text: 'Item removed from your cart.',
+        confirmButtonColor: '#4F46E5',
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Remove failed',
+        text: err.message || 'Unable to remove item from cart.',
+        confirmButtonColor: '#DC2626',
+      });
+    }
   };
 
   const applyPromoCode = () => {
@@ -37,7 +108,7 @@ export default function Cart() {
     }
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
   const discount = appliedPromo?.discount ? subtotal * appliedPromo.discount : 0;
   const shipping = appliedPromo?.freeShipping ? 0 : 15.00;
   const tax = (subtotal - discount) * 0.08;
@@ -81,7 +152,7 @@ export default function Cart() {
             <ShoppingBag size={64} className="mx-auto text-gray-300 mb-4" />
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
             <p className="text-gray-600 mb-6">Add some products to get started!</p>
-            <button className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+            <button onClick={handleContinueShopping} className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium">
               Start Shopping
             </button>
           </div>
@@ -95,9 +166,7 @@ export default function Cart() {
                   className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
                 >
                   <div className="flex gap-6">
-                    <div className="bg-linear-to-br from-gray-100 to-gray-200 w-24 h-24 rounded-lg flex items-center justify-center text-4xl shrink-0">
-                      {item.image}
-                    </div>
+                    <img src={item.image_url} className='h-24 w-24 bg-cover rounded-lg' alt={item.name} />
                     <div className="flex-1">
                       <div className="flex justify-between items-start mb-2">
                         <div>
@@ -131,10 +200,10 @@ export default function Cart() {
                         </div>
                         <div className="text-right">
                           <p className="text-2xl font-bold text-indigo-600">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            ${(Number(item.price) * item.quantity).toFixed(2)}
                           </p>
                           <p className="text-sm text-gray-500">
-                            ${item.price.toFixed(2)} each
+                            ${Number(item.price).toFixed(2)} each
                           </p>
                         </div>
                       </div>

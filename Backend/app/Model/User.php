@@ -29,6 +29,14 @@
             return $stmt->fetch(PDO::FETCH_ASSOC);
         }
 
+        public function getUserByEmail(string $email) {
+            $query = "SELECT id, name, email, password, status FROM users WHERE email = :email LIMIT 1";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':email', $email, PDO::PARAM_STR);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+
         public function createUser($data) {
             $query = "INSERT INTO users (name, email, phone, address, city, country, zipcode, status) 
                       VALUES (:name, :email, :phone, :address, :city, :country, :zipcode, :status)";
@@ -50,7 +58,7 @@
                 return false;
             }
 
-            $allowed = ['name','email','phone','address','city','country','zipcode','status'];
+            $allowed = ['name','email','phone','address','city','country','zipcode','status','password'];
             $setParts = [];
             $params = [':id' => $id];
             foreach ($data as $key => $value) {

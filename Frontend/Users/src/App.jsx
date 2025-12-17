@@ -15,6 +15,7 @@ import Customer from './Pages/Admin/Customer.jsx';
 import Analytics from './Pages/Admin/Analytics.jsx';
 import Settings from './Pages/Admin/Settings.jsx';
 import NotificationContainer from './Components/Notification.jsx';
+import Checkout from './Pages/Users/Checkout.jsx';
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
@@ -38,6 +39,7 @@ function App() {
           <Route path="/admin/customers" element={<Customer />} />
           <Route path="/admin/analytics" element={<Analytics />} />
           <Route path="/admin/settings" element={<Settings />} />
+          <Route path="/checkout" element={<Checkout />} />
         </Routes>
       </Router>
       <NotificationContainer />

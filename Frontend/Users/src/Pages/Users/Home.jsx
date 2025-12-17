@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 import { Heart, Star, ShoppingCart, TrendingUp, Zap, Award } from 'lucide-react';
 import Navbar from '../../Components/Users/Navbar.jsx';
 import Footer from '../../Components/Users/Footer.jsx';
-import { productAPI, categoryAPI } from '../../Services/api.js';
+import { productAPI, categoryAPI, cartAPI } from '../../Services/api.js';
 
 export default function Homepage() {
 
@@ -13,8 +14,43 @@ export default function Homepage() {
   const [categories, setCategories] = useState([]);
   const [cartCount, setCartCount] = useState(0);
 
-  const handleAddToCart = () => {
-    setCartCount(cartCount + 1);
+  const handleAddToCart = async (productId) => {
+    try {
+      setLoading(true);
+      const response = await cartAPI.addToCart({
+        user_id: 1,
+        product_id: productId,
+        quantity: 1,
+      });
+      
+      // Get product details for the alert
+      const product = products.find(p => p.id === productId);
+      
+      setCartCount(prev => prev + 1);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Added to Cart!',
+        text: `${product?.name || 'Product'} has been added to your cart.`,
+        confirmButtonColor: '#4F46E5',
+        timer: 2000,
+        showConfirmButton: true,
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to add to cart',
+        text: err.message || 'Something went wrong. Please try again.',
+        confirmButtonColor: '#DC2626',
+      });
+    } finally {
+      setLoading(false);
+      cartAPI.getCart().then(response => {
+        if (response.data) {
+          setCartCount(response.data.length);
+        }
+      }).catch(() => {});
+    }
   }
 
   useEffect(() => {
@@ -144,7 +180,7 @@ export default function Homepage() {
               className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all hover:scale-105 overflow-hidden"
             >
               <div className="relative">
-                <img src={`../../assets/Products/${product.image}`} alt={product.name} className='h-48 w-full object-cover' />
+                <img src={product.image} alt={product.name} className='h-48 w-full object-cover' />
                 <button className="absolute top-3 left-3 bg-white p-2 rounded-full hover:bg-red-50 transition-colors">
                   <Heart size={18} className="text-gray-600 hover:text-red-500" />
                 </button>
@@ -161,7 +197,7 @@ export default function Homepage() {
                     ${product.price}
                   </span>
                   <button
-                    onClick={handleAddToCart}
+                    onClick={() => handleAddToCart(product.id)}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
                   >
                     Add to Cart

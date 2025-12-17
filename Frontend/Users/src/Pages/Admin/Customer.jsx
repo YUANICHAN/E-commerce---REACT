@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Sidebar from '../../Components/Admin/Sidebar.jsx';
 import Header from '../../Components/Admin/Header.jsx';
+import Swal from 'sweetalert2';
 import { userAPI } from '../../Services/api';
 
 function Customer() {
@@ -21,6 +22,7 @@ function Customer() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,100 +56,204 @@ function Customer() {
   const renderCustomerModal = () => {
     return (
       <>
-        <div className='p-4 fixed inset-0 backdrop-blur-sm bg-opacity-20 flex items-center justify-center z-50 animate-in fade-in duration-200'>
-          <div className='bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-in zoom-in duration-300'>
-            <div className='sticky top-0 bg-linear-to-r from-indigo-50 to-blue-50 px-6 py-4 border-b border-gray-200'>
-              <h3 className='text-lg font-semibold text-gray-900'>Customer Details</h3>
+        <div className='fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200'>
+          <div className='bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in zoom-in duration-300'>
+            {/* Header */}
+            <div className='bg-gradient-to-r from-indigo-600 to-blue-600 px-8 py-6'>
+              <h3 className='text-2xl font-bold text-white'>
+                {editingUser ? 'Edit Customer' : 'Add New Customer'}
+              </h3>
+              <p className='text-indigo-100 text-sm mt-1'>
+                {editingUser ? 'Update customer information' : 'Fill in the details below to add a new customer'}
+              </p>
             </div>
-            <form action="" className='p-6 space-y-4'>
-              <div>
-                <label className='block text-sm font-medium text-gray-700'>Full Name</label>
-                <input
-                  type='text'
-                  name='name'
-                  className='mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500'
-                  placeholder='Juan Dela Cruz'
-                  required
-                />
+
+            {/* Form */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const payload = {
+                  name: fd.get('name') || '',
+                  email: fd.get('email') || '',
+                  phone: fd.get('phone') || '',
+                  address: fd.get('address') || '',
+                  city: fd.get('city') || '',
+                  country: fd.get('country') || '',
+                  zipcode: fd.get('zipcode') || '',
+                  status: fd.get('status') || 'Active',
+                };
+
+                try {
+                  if (editingUser) {
+                    const res = await userAPI.update(editingUser.id, payload);
+                    if (res.success) {
+                      setCustomers(prev => prev.map(u => (u.id === editingUser.id ? { ...u, ...payload } : u)));
+                      Swal.fire({ icon: 'success', title: 'Updated', text: 'Customer updated successfully.', confirmButtonColor: '#4F46E5' });
+                    }
+                  } else {
+                    const res = await userAPI.create(payload);
+                    if (res.success) {
+                      const created = res.data || { ...payload, id: Date.now() };
+                      setCustomers(prev => [...prev, created]);
+                      Swal.fire({ icon: 'success', title: 'Added', text: 'Customer added successfully.', confirmButtonColor: '#4F46E5' });
+                    }
+                  }
+                  setIsModalOpen(false);
+                  setEditingUser(null);
+                } catch (err) {
+                  Swal.fire({ icon: 'error', title: 'Failed', text: err.message || 'Please try again.', confirmButtonColor: '#DC2626' });
+                }
+              }}
+              className='p-8 overflow-y-auto max-h-[calc(90vh-140px)]'
+            >
+              {/* Personal Information Section */}
+              <div className='space-y-6'>
+                <div className='border-l-4 border-indigo-600 pl-4 mb-6'>
+                  <h4 className='text-lg font-semibold text-gray-900'>Personal Information</h4>
+                  <p className='text-sm text-gray-500'>Basic customer details</p>
+                </div>
+
+                <div>
+                  <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                    Full Name <span className='text-red-500'>*</span>
+                  </label>
+                  <input
+                    type='text'
+                    name='name'
+                    defaultValue={editingUser?.name || ''}
+                    className='w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all outline-none'
+                    placeholder='Juan Dela Cruz'
+                    required
+                  />
+                </div>
+
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-6'>
+                  <div>
+                    <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                      Email Address <span className='text-red-500'>*</span>
+                    </label>
+                    <input
+                      type='email'
+                      name='email'
+                      defaultValue={editingUser?.email || ''}
+                      className='w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all outline-none'
+                      placeholder='name@example.com'
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                      Phone Number
+                    </label>
+                    <input
+                      type='text'
+                      name='phone'
+                      defaultValue={editingUser?.phone || ''}
+                      className='w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all outline-none'
+                      placeholder='09xxxxxxxxx'
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700'>Password</label>
-                <input
-                  type='password'
-                  name='password'
-                  className='mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500'
-                  required
-                />
+
+              {/* Address Information Section */}
+              <div className='space-y-6 mt-8'>
+                <div className='border-l-4 border-blue-600 pl-4 mb-6'>
+                  <h4 className='text-lg font-semibold text-gray-900'>Address Information</h4>
+                  <p className='text-sm text-gray-500'>Location details</p>
+                </div>
+
+                <div>
+                  <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                    Street Address
+                  </label>
+                  <input
+                    type='text'
+                    name='address'
+                    defaultValue={editingUser?.address || ''}
+                    className='w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all outline-none'
+                    placeholder='123 Main St'
+                  />
+                </div>
+
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-6'>
+                  <div>
+                    <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                      City
+                    </label>
+                    <input
+                      type='text'
+                      name='city'
+                      defaultValue={editingUser?.city || ''}
+                      className='w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all outline-none'
+                      placeholder='Baybay'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                      Zip Code
+                    </label>
+                    <input
+                      type='text'
+                      name='zipcode'
+                      defaultValue={editingUser?.zipcode || ''}
+                      className='w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all outline-none'
+                      placeholder='6521'
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                    Country
+                  </label>
+                  <input
+                    type='text'
+                    name='country'
+                    defaultValue={editingUser?.country || ''}
+                    className='w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all outline-none'
+                    placeholder='Philippines'
+                  />
+                </div>
               </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700'>Phone</label>
-                <input
-                  type='text'
-                  name='phone'
-                  className='mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500'
-                  placeholder='09xxxxxxxxx'
-                />
+
+              {/* Status Section */}
+              <div className='space-y-6 mt-8'>
+                <div className='border-l-4 border-green-600 pl-4 mb-6'>
+                  <h4 className='text-lg font-semibold text-gray-900'>Account Status</h4>
+                  <p className='text-sm text-gray-500'>Set customer account status</p>
+                </div>
+
+                <div>
+                  <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                    Status
+                  </label>
+                  <select
+                    name='status'
+                    defaultValue={editingUser?.status || 'Active'}
+                    className='w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all outline-none bg-white'
+                  >
+                    <option value='Active'>✓ Active</option>
+                    <option value='Inactive'>✕ Inactive</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700'>Phone</label>
-                <input
-                  type='text'
-                  name='phone'
-                  className='mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500'
-                  placeholder='09xxxxxxxxx'
-                />
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700'>City</label>
-                <input
-                  type='text'
-                  name='city'
-                  className='mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500'
-                  placeholder='Baybay'
-                />
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700'>Country</label>
-                <input
-                  type='text'
-                  name='country'
-                  className='mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500'
-                  placeholder='Philippines'
-                />
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700'>Zip Code</label>
-                <input
-                  type='text'
-                  name='zipcode'
-                  className='mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500'
-                  placeholder='6521'
-                />
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700'>Status</label>
-                <select
-                  name='status'
-                  className='mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500'
-                >
-                  <option value='Active'>Active</option>
-                  <option value='Inactive'>Inactive</option>
-                </select>
-              </div>
-              <div className='flex justify-end gap-3 pt-4'>
+
+              {/* Action Buttons */}
+              <div className='flex justify-end gap-4 pt-8 mt-8 border-t border-gray-200'>
                 <button
                   type='button'
-                  onClick={() => setIsModalOpen(false)}
-                  className='px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100'
+                  onClick={() => { setIsModalOpen(false); setEditingUser(null); }}
+                  className='px-6 py-3 rounded-lg border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all'
                 >
-                  
                   Cancel
                 </button>
                 <button
                   type='submit'
-                  className='px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700'
+                  className='px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold hover:from-indigo-700 hover:to-blue-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all'
                 >
-                  Save Customer
+                  {editingUser ? '✓ Update Customer' : '+ Save Customer'}
                 </button>
               </div>
             </form>
@@ -155,7 +261,7 @@ function Customer() {
         </div>
       </>
     );
-  }
+  };
 
   const filteredCustomers = customers.filter(customer => {
     const name = (customer?.name || '').toLowerCase();
@@ -244,7 +350,7 @@ function Customer() {
                       <option value="inactive">Inactive</option>
                     </select>
                   </div>
-                  <button onClick={() => setIsModalOpen(true)}
+                  <button onClick={() => { setEditingUser(null); setIsModalOpen(true); }}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center gap-2">
                     <UserPlus size={18} />
                     Add Customer
@@ -316,10 +422,37 @@ function Customer() {
                           <button className="text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 p-1 rounded transition-colors duration-200">
                             <Eye size={16} />
                           </button>
-                          <button className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-1 rounded transition-colors duration-200">
+                          <button
+                            onClick={() => { setEditingUser(customer); setIsModalOpen(true); }}
+                            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-1 rounded transition-colors duration-200">
                             <Edit size={16} />
                           </button>
-                          <button className="text-red-600 hover:text-red-900 hover:bg-red-50 p-1 rounded transition-colors duration-200">
+                          <button
+                            onClick={async () => {
+                              const result = await Swal.fire({
+                                title: 'Delete customer?',
+                                text: `This will remove ${customer.name || 'this customer'}.`,
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#DC2626',
+                                cancelButtonColor: '#6B7280',
+                                confirmButtonText: 'Delete',
+                                cancelButtonText: 'Cancel',
+                                reverseButtons: true,
+                                focusCancel: true,
+                              });
+                              if (!result.isConfirmed) return;
+                              try {
+                                const res = await userAPI.remove(customer.id);
+                                if (res.success) {
+                                  setCustomers(prev => prev.filter(u => u.id !== customer.id));
+                                  Swal.fire({ icon: 'success', title: 'Deleted', text: 'Customer deleted.', confirmButtonColor: '#4F46E5' });
+                                }
+                              } catch (err) {
+                                Swal.fire({ icon: 'error', title: 'Delete failed', text: err.message || 'Please try again.', confirmButtonColor: '#DC2626' });
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-900 hover:bg-red-50 p-1 rounded transition-colors duration-200">
                             <Trash2 size={16} />
                           </button>
                         </div>

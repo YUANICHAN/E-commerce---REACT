@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import Swal from 'sweetalert2';
 import { Mail, Lock, Eye, EyeOff, ShoppingBag, ArrowRight } from 'lucide-react';
+import { authAPI } from '../../Services/api.js';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -9,13 +11,39 @@ export default function Login() {
     rememberMe: false
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.email || !formData.password) {
-      alert('Please fill in all fields');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing fields',
+        text: 'Please enter both email and password.',
+        confirmButtonColor: '#4F46E5',
+      });
       return;
     }
-    console.log('Login submitted:', formData);
-    // Handle login logic here
+
+    try {
+      const res = await authAPI.login({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Welcome back!',
+        text: res?.message || 'You are now logged in.',
+        confirmButtonColor: '#4F46E5',
+      }).then(() => {
+        window.location.href = '/';
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Login failed',
+        text: err?.message || 'Invalid email or password. Please try again.',
+        confirmButtonColor: '#DC2626',
+      });
+    }
   };
 
   const handleChange = (e) => {
